@@ -1,19 +1,44 @@
 const mongoose = require('mongoose');
 const Store = mongoose.model('Store');
-
-exports.homePage = (req, res) => {
-  req.flash('error', 'Something Happened');
-  req.flash('info', 'Something Happened');
-  req.flash('warning', 'Something Happened');
-  req.flash('success', 'Something Happened');
-  res.render('index');
-};
+const multer = require('multer');
+const jimp = require('jimp');
+const uuid = require('uuid');
+const multerOptions = {
+  storage: multer.memoryStorage(),
+  fileFilter: function(req, file, next) {
+    const isPhoto = file.mimetype.startsWith('image/');
+    if(isPhoto) {
+      next(null, true);
+    } else {
+      next({ message: 'That filetype isn\t allowed!' }, false);
+    }
+  }
+}
 
 exports.addStore = (req, res) => {
   res.render('editStore', {
     title: 'Add Store'
   });
 };
+
+exports.upload = multer(multerOptions).single('photo');
+
+exports.resize = async (req, res, next) => {
+  // check is there is no new file to resize
+  if (!req.file) {
+    next(); // skip to next middleware
+    return;
+  }
+
+  const extension = req.file.mimetype.split('/')[1];
+  req.body.photo = `${uuid.v4()}.${extension}`;
+  // now we resize
+  const photo = await jimp.read(req.file.buffer);
+  await photo.resize(800, jimp.AUTO);
+  await photo.write(`./public/uploads/${req.body.photo}`);
+  // once we have written the photo to our filesystem, keep going
+  next();
+}
 
 exports.createStore = async (req, res) => {
   const store = await (new Store(req.body)).save();
@@ -34,6 +59,7 @@ exports.editStore = async (req, res) => {
 };
 
 exports.updateStore = async (req, res) => {
+  req.body.location.type = 'Point';
   const store = await Store.findOneAndUpdate({ _id: req.params.id}, req.body, {
     new: true,
     runValidators: true
@@ -41,3 +67,9 @@ exports.updateStore = async (req, res) => {
   req.flash('success', `Successfully updated ${store.name} <a href="/stores/${store.slug}"> View Store</a>`);
   res.redirect(`/stores/${store._id}/edit`);
 };
+
+exports.showStore = async (req, res, next) => {
+  const store = await Store.findOne({ slug: req.params.slug })
+  if(!store) return next();
+  res.render('store', { title: `${store.name}}`, store });
+}
