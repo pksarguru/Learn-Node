@@ -5,14 +5,14 @@ const userController = require('../controllers/userController');
 const authController = require('../controllers/authController');
 const { catchErrors } = require('../handlers/errorHandlers');
 
-// Do work here
 router.get('/', catchErrors(storeController.getStores));
 router.get('/stores', catchErrors(storeController.getStores));
-router.get('/add', authController.isLoggedIn , storeController.addStore);
+router.get('/add', authController.isLoggedIn, storeController.addStore);
 
 router.post('/add',
   storeController.upload,
-  catchErrors(storeController.resize), catchErrors(storeController.createStore)
+  catchErrors(storeController.resize),
+  catchErrors(storeController.createStore)
 );
 
 router.post('/add/:id',
@@ -21,8 +21,8 @@ router.post('/add/:id',
   catchErrors(storeController.updateStore)
 );
 
-router.get('/stores/:slug', catchErrors(storeController.showStore));
 router.get('/stores/:id/edit', catchErrors(storeController.editStore));
+router.get('/store/:slug', catchErrors(storeController.getStoreBySlug));
 
 router.get('/tags', catchErrors(storeController.getStoresByTag));
 router.get('/tags/:tag', catchErrors(storeController.getStoresByTag));
@@ -46,5 +46,4 @@ router.post('/account/reset/:token',
   authController.confirmedPasswords,
   catchErrors(authController.update)
 );
-
 module.exports = router;
